@@ -13,6 +13,7 @@ import ClientesPage from "./pages/Clientes";
 import ConfiguracoesPage from "./pages/Configuracoes";
 import VitrinePage from "./pages/Vitrine";
 import AuthPage from "./pages/Auth";
+import LandingPage from "./pages/LandingPage";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
 import { getTenantSlug } from "@/lib/tenant";
@@ -52,6 +53,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/landing" element={<LandingPage />} />
       <Route path="/auth" element={<AuthRoute />} />
       <Route path="/vitrine/:slug" element={<VitrinePage />} />
       <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
