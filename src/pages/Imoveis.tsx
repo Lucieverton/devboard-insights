@@ -99,10 +99,10 @@ export default function ImoveisPage() {
   const openView = (i: Imovel) => { setViewing(i); setViewOpen(true); };
   const openDelete = (id: string) => { setDeleteId(id); setDeleteOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.endereco.trim()) return;
-    if (editing) updateImovel({ ...form, id: editing.id });
-    else addImovel(form);
+    if (editing) await updateImovel({ ...form, id: editing.id });
+    else await addImovel(form);
     setModalOpen(false);
   };
 
@@ -399,7 +399,7 @@ export default function ImoveisPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => { if (deleteId) deleteImovel(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={async () => { if (deleteId) await deleteImovel(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

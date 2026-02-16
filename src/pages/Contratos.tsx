@@ -93,10 +93,10 @@ export default function ContratosPage() {
     setNovaNota("");
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.imovelId || !form.clienteId) return;
-    if (editing) updateContrato({ ...form, id: editing.id });
-    else addContrato(form);
+    if (editing) await updateContrato({ ...form, id: editing.id });
+    else await addContrato(form);
     setModalOpen(false);
   };
 
@@ -351,7 +351,7 @@ export default function ContratosPage() {
           <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir este contrato?</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => { if (deleteId) deleteContrato(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={async () => { if (deleteId) await deleteContrato(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
