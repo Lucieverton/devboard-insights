@@ -76,17 +76,17 @@ export default function ContratosPage() {
   const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-neon">Contratos</h2>
+    <div className="p-3 md:p-6 space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="text-lg md:text-xl font-bold text-neon">Contratos</h2>
         <Button onClick={openNew} className="bg-primary text-primary-foreground hover:bg-primary/80"><Plus className="w-4 h-4 mr-1.5" /> Adicionar Novo</Button>
       </div>
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar contratos..." className="pl-9 bg-secondary border-border" />
       </div>
-      <div className="neon-border card-inset rounded-lg bg-card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="neon-border card-inset rounded-lg bg-card overflow-x-auto">
+        <table className="w-full text-sm min-w-[700px]">
           <thead><tr className="border-b border-border/50">
             <SortHeader k="tipo" label="Tipo" />
             <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Imóvel</th>

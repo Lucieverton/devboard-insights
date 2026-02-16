@@ -40,13 +40,13 @@ export function HeaderCards({ data }: HeaderCardsProps) {
   const totalComissao = data.reduce((sum, d) => sum + d.comissao, 0);
 
   return (
-    <header className="flex items-center gap-4 p-4 border-b border-border/50">
-      <div className="shrink-0 mr-2">
+    <header className="flex flex-col md:flex-row md:items-center gap-3 md:gap-4 p-3 md:p-4 border-b border-border/50">
+      <div className="shrink-0 mr-2 hidden md:block">
         <h1 className="text-lg font-bold text-neon tracking-tight">DevBoard</h1>
         <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Stores</p>
       </div>
 
-      <div className="flex gap-3 flex-1 min-w-0">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 md:gap-3 flex-1 min-w-0">
         <SummaryCard
           icon={FileStack}
           label="Contratos Ativos"
