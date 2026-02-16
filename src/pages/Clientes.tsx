@@ -1,16 +1,21 @@
 import { useState, useMemo } from "react";
-import { useData, Cliente } from "@/contexts/DataContext";
+import { useData, Cliente, ClientePreferencia } from "@/contexts/DataContext";
 import { BAIRROS, TIPOS_IMOVEL } from "@/data/mockData";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Target } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE = 8;
-const emptyForm: Omit<Cliente, "id"> = { nome: "", contato: "", cpfCnpj: "", interesses: [] };
+const bairrosOpts = BAIRROS.slice(1);
+const tiposOpts = TIPOS_IMOVEL.slice(1);
+
+const emptyPref: ClientePreferencia = { tipoImovel: "", bairro: "", valorMax: 0 };
+const emptyForm: Omit<Cliente, "id"> = { nome: "", contato: "", cpfCnpj: "", interesses: [], preferencia: undefined };
 
 export default function ClientesPage() {
   const { clientes, addCliente, updateCliente, deleteCliente } = useData();
@@ -27,6 +32,8 @@ export default function ClientesPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Cliente, "id">>(emptyForm);
   const [interesseInput, setInteresseInput] = useState("");
+  const [showPref, setShowPref] = useState(false);
+  const [pref, setPref] = useState<ClientePreferencia>(emptyPref);
 
   const filtered = useMemo(() => {
     let list = clientes.filter((c) => {
@@ -43,15 +50,23 @@ export default function ClientesPage() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
-  const openNew = () => { setEditing(null); setForm(emptyForm); setInteresseInput(""); setModalOpen(true); };
-  const openEdit = (c: Cliente) => { setEditing(c); setForm({ nome: c.nome, contato: c.contato, cpfCnpj: c.cpfCnpj, interesses: [...c.interesses] }); setInteresseInput(""); setModalOpen(true); };
+  const openNew = () => { setEditing(null); setForm(emptyForm); setInteresseInput(""); setShowPref(false); setPref(emptyPref); setModalOpen(true); };
+  const openEdit = (c: Cliente) => {
+    setEditing(c);
+    setForm({ nome: c.nome, contato: c.contato, cpfCnpj: c.cpfCnpj, interesses: [...c.interesses], preferencia: c.preferencia });
+    setInteresseInput("");
+    setShowPref(!!c.preferencia);
+    setPref(c.preferencia || emptyPref);
+    setModalOpen(true);
+  };
   const openView = (c: Cliente) => { setViewing(c); setViewOpen(true); };
   const openDelete = (id: string) => { setDeleteId(id); setDeleteOpen(true); };
 
   const handleSave = () => {
     if (!form.nome.trim()) return;
-    if (editing) updateCliente({ ...form, id: editing.id });
-    else addCliente(form);
+    const data = { ...form, preferencia: showPref && (pref.tipoImovel || pref.bairro || pref.valorMax) ? pref : undefined };
+    if (editing) updateCliente({ ...data, id: editing.id });
+    else addCliente(data);
     setModalOpen(false);
   };
 
@@ -76,6 +91,8 @@ export default function ClientesPage() {
     </th>
   );
 
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
   return (
     <div className="p-3 md:p-6 space-y-4">
       <div className="flex items-center justify-between gap-2">
@@ -87,12 +104,13 @@ export default function ClientesPage() {
         <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar clientes..." className="pl-9 bg-secondary border-border" />
       </div>
       <div className="neon-border card-inset rounded-lg bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[550px]">
+        <table className="w-full text-sm min-w-[650px]">
           <thead><tr className="border-b border-border/50">
             <SortHeader k="nome" label="Nome" />
             <SortHeader k="contato" label="Contato" />
             <SortHeader k="cpfCnpj" label="CPF/CNPJ" />
             <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Interesses</th>
+            <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Preferência</th>
             <th className="py-2 px-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Ações</th>
           </tr></thead>
           <tbody>
@@ -109,6 +127,13 @@ export default function ClientesPage() {
                     {c.interesses.length > 2 && <span className="text-[10px] text-muted-foreground">+{c.interesses.length - 2}</span>}
                   </div>
                 </td>
+                <td className="py-2 px-3">
+                  {c.preferencia ? (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent inline-flex items-center gap-1">
+                      <Target className="w-3 h-3" /> {c.preferencia.tipoImovel || "Qualquer"} · {c.preferencia.bairro || "Qualquer"} · até {fmt(c.preferencia.valorMax || 0)}
+                    </span>
+                  ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                </td>
                 <td className="py-2 px-3 text-right space-x-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openView(c)}><Eye className="w-3.5 h-3.5" /></Button>
                   <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -116,7 +141,7 @@ export default function ClientesPage() {
                 </td>
               </tr>
             ))}
-            {paged.length === 0 && <tr><td colSpan={5} className="py-8 text-center text-muted-foreground">Nenhum cliente encontrado</td></tr>}
+            {paged.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Nenhum cliente encontrado</td></tr>}
           </tbody>
         </table>
       </div>
@@ -131,7 +156,7 @@ export default function ClientesPage() {
 
       {/* Form Modal */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="bg-card border-border">
+        <DialogContent className="bg-card border-border max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="text-neon">{editing ? "Editar Cliente" : "Novo Cliente"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div><Label className="text-xs text-muted-foreground">Nome</Label><Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="bg-secondary border-border" /></div>
@@ -150,6 +175,33 @@ export default function ClientesPage() {
                   <Badge key={i} variant="secondary" className="cursor-pointer hover:bg-destructive/20" onClick={() => removeInteresse(i)}>{int} ×</Badge>
                 ))}
               </div>
+            </div>
+
+            {/* Preference Section */}
+            <div className="border border-border/50 rounded-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs text-muted-foreground inline-flex items-center gap-1"><Target className="w-3.5 h-3.5 text-accent" /> Perfil de Interesse (Match)</Label>
+                <Button variant="ghost" size="sm" className="text-xs h-6" onClick={() => setShowPref(!showPref)}>{showPref ? "Remover" : "Adicionar"}</Button>
+              </div>
+              {showPref && (
+                <div className="grid grid-cols-3 gap-3">
+                  <div><Label className="text-[10px] text-muted-foreground">Tipo Imóvel</Label>
+                    <Select value={pref.tipoImovel} onValueChange={(v) => setPref({ ...pref, tipoImovel: v })}>
+                      <SelectTrigger className="bg-secondary border-border h-8 text-xs"><SelectValue placeholder="Qualquer" /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">{tiposOpts.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label className="text-[10px] text-muted-foreground">Bairro</Label>
+                    <Select value={pref.bairro} onValueChange={(v) => setPref({ ...pref, bairro: v })}>
+                      <SelectTrigger className="bg-secondary border-border h-8 text-xs"><SelectValue placeholder="Qualquer" /></SelectTrigger>
+                      <SelectContent className="bg-popover border-border z-50">{bairrosOpts.map((b) => <SelectItem key={b} value={b}>{b}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div><Label className="text-[10px] text-muted-foreground">Valor Máx (R$)</Label>
+                    <Input type="number" value={pref.valorMax || ""} onChange={(e) => setPref({ ...pref, valorMax: Number(e.target.value) })} className="bg-secondary border-border h-8 text-xs" placeholder="500000" />
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -171,6 +223,16 @@ export default function ClientesPage() {
               <div><span className="text-muted-foreground">Interesses:</span>
                 <div className="flex gap-1 flex-wrap mt-1">{viewing.interesses.map((int, i) => <Badge key={i} variant="secondary">{int}</Badge>)}</div>
               </div>
+              {viewing.preferencia && (
+                <div className="border border-accent/30 rounded-lg p-3 mt-2">
+                  <Label className="text-xs text-accent inline-flex items-center gap-1 mb-1"><Target className="w-3.5 h-3.5" /> Perfil de Match</Label>
+                  <div className="text-xs space-y-1 mt-1">
+                    <p><span className="text-muted-foreground">Tipo:</span> {viewing.preferencia.tipoImovel || "Qualquer"}</p>
+                    <p><span className="text-muted-foreground">Bairro:</span> {viewing.preferencia.bairro || "Qualquer"}</p>
+                    <p><span className="text-muted-foreground">Valor Máx:</span> {fmt(viewing.preferencia.valorMax)}</p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>

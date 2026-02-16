@@ -17,6 +17,14 @@ export interface Imovel {
   fotoUrl: string;
 }
 
+export type ContratoEtapa = "Proposta" | "Documentação" | "Assinatura" | "Concluído";
+
+export interface ContratoNota {
+  id: string;
+  texto: string;
+  data: string;
+}
+
 export interface Contrato {
   id: string;
   imovelId: string;
@@ -26,6 +34,17 @@ export interface Contrato {
   comissaoPercent: number;
   dataInicio: string;
   dataFim: string;
+  etapa: ContratoEtapa;
+  notas: ContratoNota[];
+  dataRecebimento: string;
+  comissaoPaga: boolean;
+  documentoUrl: string;
+}
+
+export interface ClientePreferencia {
+  tipoImovel: string;
+  bairro: string;
+  valorMax: number;
 }
 
 export interface Cliente {
@@ -34,6 +53,17 @@ export interface Cliente {
   contato: string;
   cpfCnpj: string;
   interesses: string[];
+  preferencia?: ClientePreferencia;
+}
+
+export interface MatchAlerta {
+  clienteId: string;
+  clienteNome: string;
+  imovelId: string;
+  imovelEndereco: string;
+  imovelBairro: string;
+  imovelTipo: string;
+  imovelValor: number;
 }
 
 interface DataContextType {
@@ -49,6 +79,7 @@ interface DataContextType {
   addCliente: (c: Omit<Cliente, "id">) => void;
   updateCliente: (c: Cliente) => void;
   deleteCliente: (id: string) => void;
+  getMatches: () => MatchAlerta[];
 }
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -74,6 +105,7 @@ const FOTOS_IMOVEL: Record<string, string> = {
 };
 const NOMES = ["Ana Silva", "Carlos Mendes", "Fernanda Oliveira", "José Santos", "Maria Costa", "Pedro Lima", "Juliana Alves", "Roberto Souza", "Camila Pereira", "Lucas Rocha", "Patrícia Martins", "Bruno Ferreira", "Raquel Nunes", "Thiago Barbosa", "Beatriz Gomes"];
 const RUAS = ["Rua do Sol", "Av. Álvaro Otacílio", "Rua Jangadeiros Alagoanos", "Av. Gustavo Paiva", "Rua Cel. Antônio Cândido", "Rua Dr. Antônio Gouveia", "Av. Fernandes Lima", "Rua Barão de Penedo", "Rua Dep. José Lages", "Av. Comendador Gustavo Paiva"];
+const ETAPAS: ContratoEtapa[] = ["Proposta", "Documentação", "Assinatura", "Concluído"];
 
 function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 
@@ -84,6 +116,11 @@ function generateInitialData() {
     contato: `(82) 9${Math.floor(1000 + Math.random() * 9000)}-${Math.floor(1000 + Math.random() * 9000)}`,
     cpfCnpj: `${Math.floor(100 + Math.random() * 900)}.${Math.floor(100 + Math.random() * 900)}.${Math.floor(100 + Math.random() * 900)}-${Math.floor(10 + Math.random() * 90)}`,
     interesses: [pick(TIPOS_IMOVEL), pick(BAIRROS_LIST)],
+    preferencia: Math.random() > 0.3 ? {
+      tipoImovel: pick(TIPOS_IMOVEL),
+      bairro: pick(BAIRROS_LIST),
+      valorMax: Math.round(200000 + Math.random() * 600000),
+    } : undefined,
   }));
 
   const imoveis: Imovel[] = [];
@@ -117,12 +154,27 @@ function generateInitialData() {
     return { start: `2025-${m}-01`, end: `2025-${m}-28` };
   });
 
+  const notasExemplo = [
+    "Cliente solicitou desconto na entrada",
+    "Aguardando vistoria do banco",
+    "Documentação enviada para análise",
+    "Cliente pediu prazo maior",
+    "Certidão negativa solicitada",
+  ];
+
   for (let i = 0; i < 60; i++) {
     const imovel = pick(imoveis);
     const cliente = pick(clientes);
     const tipo = imovel.status === "Alugado" ? "Locação" as const : imovel.status === "Vendido" ? "Venda" as const : pick(["Locação", "Venda"] as const);
     const mesData = pick(meses2025);
     const comissaoPercent = tipo === "Venda" ? 5 : 10;
+    const etapa = pick(ETAPAS);
+    const numNotas = Math.floor(Math.random() * 3);
+    const notas: ContratoNota[] = Array.from({ length: numNotas }, (_, j) => ({
+      id: uid(),
+      texto: pick(notasExemplo),
+      data: new Date(now.getTime() - Math.floor(Math.random() * 30) * 86400000).toISOString(),
+    }));
 
     contratos.push({
       id: `con-${i}`,
@@ -133,6 +185,11 @@ function generateInitialData() {
       comissaoPercent,
       dataInicio: mesData.start,
       dataFim: mesData.end,
+      etapa,
+      notas,
+      dataRecebimento: etapa === "Concluído" ? mesData.end : "",
+      comissaoPaga: etapa === "Concluído" && Math.random() > 0.4,
+      documentoUrl: etapa === "Concluído" || etapa === "Assinatura" ? "https://drive.google.com/example" : "",
     });
   }
 
@@ -185,12 +242,39 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
     toast({ title: "Cliente excluído", description: "Registro removido." });
   }, []);
 
+  const getMatches = useCallback((): MatchAlerta[] => {
+    const disponíveis = imoveis.filter((i) => i.status === "Disponível");
+    const matches: MatchAlerta[] = [];
+    for (const cliente of clientes) {
+      if (!cliente.preferencia) continue;
+      const { tipoImovel, bairro, valorMax } = cliente.preferencia;
+      for (const imovel of disponíveis) {
+        const tipoMatch = !tipoImovel || tipoImovel === imovel.tipo;
+        const bairroMatch = !bairro || bairro === imovel.bairro;
+        const valorMatch = !valorMax || imovel.valor <= valorMax;
+        if (tipoMatch && bairroMatch && valorMatch) {
+          matches.push({
+            clienteId: cliente.id,
+            clienteNome: cliente.nome,
+            imovelId: imovel.id,
+            imovelEndereco: imovel.endereco,
+            imovelBairro: imovel.bairro,
+            imovelTipo: imovel.tipo,
+            imovelValor: imovel.valor,
+          });
+        }
+      }
+    }
+    return matches;
+  }, [imoveis, clientes]);
+
   return (
     <DataContext.Provider value={{
       imoveis, contratos, clientes,
       addImovel, updateImovel, deleteImovel,
       addContrato, updateContrato, deleteContrato,
       addCliente, updateCliente, deleteCliente,
+      getMatches,
     }}>
       {children}
     </DataContext.Provider>
