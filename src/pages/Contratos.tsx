@@ -13,13 +13,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
 const PAGE_SIZE = 8;
-const ETAPAS: ContratoEtapa[] = ["Proposta", "Documentação", "Assinatura", "Concluído"];
+const ETAPAS: ContratoEtapa[] = ["Proposta", "Documentação", "Assinatura", "Concluído", "Cancelado"];
 
 const etapaConfig: Record<ContratoEtapa, { icon: typeof Clock; color: string }> = {
   Proposta: { icon: Send, color: "bg-chart-orange/20 text-chart-orange" },
   Documentação: { icon: FileText, color: "bg-chart-blue/20 text-chart-blue" },
   Assinatura: { icon: FileCheck, color: "bg-chart-purple/20 text-chart-purple" },
   Concluído: { icon: CheckCircle2, color: "bg-accent/20 text-accent" },
+  Cancelado: { icon: Trash2, color: "bg-destructive/20 text-destructive" },
 };
 
 const emptyForm: Omit<Contrato, "id"> = {

@@ -21,7 +21,7 @@ export interface Imovel {
   fotoCapa: number;
 }
 
-export type ContratoEtapa = "Proposta" | "Documentação" | "Assinatura" | "Concluído";
+export type ContratoEtapa = "Proposta" | "Documentação" | "Assinatura" | "Concluído" | "Cancelado";
 
 export interface ContratoNota {
   id: string;
@@ -266,6 +266,14 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       ultima_visita: i.ultimaVisita || null,
     }).eq("id", i.id);
     if (error) { toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" }); return; }
+
+    // Auto-cancel non-concluded contracts when property returns to "Disponível"
+    if (i.status === "Disponível") {
+      await supabase.from("contratos")
+        .update({ etapa: "Cancelado" })
+        .eq("imovel_id", i.id)
+        .in("etapa", ["Proposta", "Documentação", "Assinatura"]);
+    }
 
     // Sync photos: delete old, insert new
     await supabase.from("imovel_fotos").delete().eq("imovel_id", i.id);
