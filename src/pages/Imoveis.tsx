@@ -8,12 +8,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Sparkles, Share2, CalendarDays } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Sparkles, Share2, CalendarDays, HandshakeIcon } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
 import { PhotoGallery } from "@/components/imoveis/PhotoGallery";
 import { ImageCarousel } from "@/components/imoveis/ImageCarousel";
+import { FinalizarNegocioModal } from "@/components/imoveis/FinalizarNegocioModal";
 
 const STATUSES = ["Disponível", "Vendido", "Alugado"] as const;
 const PAGE_SIZE = 8;
@@ -61,6 +62,8 @@ export default function ImoveisPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Imovel, "id">>(emptyForm);
   const [cepLoading, setCepLoading] = useState(false);
+  const [finalizarOpen, setFinalizarOpen] = useState(false);
+  const [finalizarImovel, setFinalizarImovel] = useState<Imovel | null>(null);
 
   // Price bounds for slider
   const priceBounds = useMemo(() => {
@@ -242,6 +245,11 @@ export default function ImoveisPage() {
                     </span>
                   </td>
                   <td className="py-2 px-3 text-right space-x-1 whitespace-nowrap">
+                    {i.status === "Disponível" && (
+                      <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-accent" onClick={() => { setFinalizarImovel(i); setFinalizarOpen(true); }} aria-label="Finalizar Negócio">
+                        <HandshakeIcon className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openView(i)}><Eye className="w-3.5 h-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openEdit(i)}><Pencil className="w-3.5 h-3.5" /></Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-accent" onClick={() => gerarWhatsApp(i)} aria-label="Compartilhar WhatsApp"><Share2 className="w-3.5 h-3.5" /></Button>
@@ -403,6 +411,15 @@ export default function ImoveisPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Finalizar Negócio Modal */}
+      {finalizarImovel && (
+        <FinalizarNegocioModal
+          open={finalizarOpen}
+          onOpenChange={(v) => { setFinalizarOpen(v); if (!v) setFinalizarImovel(null); }}
+          imovel={finalizarImovel}
+        />
+      )}
     </div>
   );
 }
