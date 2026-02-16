@@ -5,10 +5,16 @@ import { toast } from "@/hooks/use-toast";
 export interface Imovel {
   id: string;
   endereco: string;
+  cep: string;
   bairro: string;
+  cidade: string;
+  complemento: string;
   tipo: string;
   valor: number;
   status: "Disponível" | "Vendido" | "Alugado";
+  criadoEm: string;
+  ultimaVisita: string;
+  fotoUrl: string;
 }
 
 export interface Contrato {
@@ -58,6 +64,14 @@ const uid = () => Math.random().toString(36).slice(2, 10);
 
 const BAIRROS_LIST = ["Ponta Verde", "Jatiúca", "Pajuçara", "Mangabeiras", "Farol", "Benedito Bentes", "Stella Maris", "Cruz das Almas", "Gruta de Lourdes", "Serraria"];
 const TIPOS_IMOVEL = ["Casa", "Apartamento", "Terreno", "Ponto Comercial", "Sala Comercial", "Galpão"];
+const FOTOS_IMOVEL: Record<string, string> = {
+  Casa: "https://images.unsplash.com/photo-1518780664697-55e3ad937233?w=200&h=150&fit=crop",
+  Apartamento: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=200&h=150&fit=crop",
+  Terreno: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=200&h=150&fit=crop",
+  "Ponto Comercial": "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=200&h=150&fit=crop",
+  "Sala Comercial": "https://images.unsplash.com/photo-1497366216548-37526070297c?w=200&h=150&fit=crop",
+  "Galpão": "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=200&h=150&fit=crop",
+};
 const NOMES = ["Ana Silva", "Carlos Mendes", "Fernanda Oliveira", "José Santos", "Maria Costa", "Pedro Lima", "Juliana Alves", "Roberto Souza", "Camila Pereira", "Lucas Rocha", "Patrícia Martins", "Bruno Ferreira", "Raquel Nunes", "Thiago Barbosa", "Beatriz Gomes"];
 const RUAS = ["Rua do Sol", "Av. Álvaro Otacílio", "Rua Jangadeiros Alagoanos", "Av. Gustavo Paiva", "Rua Cel. Antônio Cândido", "Rua Dr. Antônio Gouveia", "Av. Fernandes Lima", "Rua Barão de Penedo", "Rua Dep. José Lages", "Av. Comendador Gustavo Paiva"];
 
@@ -73,16 +87,27 @@ function generateInitialData() {
   }));
 
   const imoveis: Imovel[] = [];
+  const now = new Date();
   for (let i = 0; i < 30; i++) {
     const tipo = pick(TIPOS_IMOVEL);
     const isVenda = Math.random() > 0.5;
+    const hoursAgo = Math.floor(Math.random() * 200);
+    const criadoEm = new Date(now.getTime() - hoursAgo * 3600000).toISOString();
+    const visitaDaysAgo = Math.floor(Math.random() * 30);
+    const ultimaVisita = visitaDaysAgo < 20 ? new Date(now.getTime() - visitaDaysAgo * 86400000).toISOString() : "";
     imoveis.push({
       id: `imo-${i}`,
       endereco: `${pick(RUAS)}, ${Math.floor(10 + Math.random() * 2000)}`,
+      cep: `57${Math.floor(10 + Math.random() * 90)}${Math.floor(100 + Math.random() * 900)}`,
       bairro: pick(BAIRROS_LIST),
+      cidade: "Maceió",
+      complemento: i % 3 === 0 ? `Apto ${Math.floor(100 + Math.random() * 900)}` : "",
       tipo,
       valor: isVenda ? Math.round(150000 + Math.random() * 500000) : Math.round(1500 + Math.random() * 8000),
       status: pick(["Disponível", "Vendido", "Alugado"] as const),
+      criadoEm,
+      ultimaVisita,
+      fotoUrl: FOTOS_IMOVEL[tipo] || "",
     });
   }
 
