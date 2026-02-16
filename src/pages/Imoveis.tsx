@@ -12,6 +12,8 @@ import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Sparkles,
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
+import { PhotoGallery } from "@/components/imoveis/PhotoGallery";
+import { ImageCarousel } from "@/components/imoveis/ImageCarousel";
 
 const STATUSES = ["Disponível", "Vendido", "Alugado"] as const;
 const PAGE_SIZE = 8;
@@ -22,6 +24,7 @@ const emptyForm: Omit<Imovel, "id"> = {
   endereco: "", cep: "", bairro: bairrosOpts[0], cidade: "Maceió", complemento: "",
   tipo: tiposOpts[0], valor: 0, status: "Disponível",
   criadoEm: new Date().toISOString(), ultimaVisita: "", fotoUrl: "",
+  fotos: [], fotoCapa: 0,
 };
 
 function isNew(criadoEm: string) {
@@ -90,7 +93,7 @@ export default function ImoveisPage() {
   const openNew = () => { setEditing(null); setForm({ ...emptyForm, criadoEm: new Date().toISOString() }); setModalOpen(true); };
   const openEdit = (i: Imovel) => {
     setEditing(i);
-    setForm({ endereco: i.endereco, cep: i.cep, bairro: i.bairro, cidade: i.cidade, complemento: i.complemento, tipo: i.tipo, valor: i.valor, status: i.status, criadoEm: i.criadoEm, ultimaVisita: i.ultimaVisita, fotoUrl: i.fotoUrl });
+    setForm({ endereco: i.endereco, cep: i.cep, bairro: i.bairro, cidade: i.cidade, complemento: i.complemento, tipo: i.tipo, valor: i.valor, status: i.status, criadoEm: i.criadoEm, ultimaVisita: i.ultimaVisita, fotoUrl: i.fotoUrl, fotos: i.fotos || [], fotoCapa: i.fotoCapa || 0 });
     setModalOpen(true);
   };
   const openView = (i: Imovel) => { setViewing(i); setViewOpen(true); };
@@ -213,9 +216,14 @@ export default function ImoveisPage() {
                       <TooltipTrigger asChild>
                         <span className="cursor-default">{i.endereco}</span>
                       </TooltipTrigger>
-                      {i.fotoUrl && (
-                        <TooltipContent side="right" className="p-0 bg-card border-border">
-                          <img src={i.fotoUrl} alt={i.tipo} className="w-48 h-32 object-cover rounded" />
+                      {(i.fotos?.length > 0 || i.fotoUrl) && (
+                        <TooltipContent side="right" className="p-0 bg-card border-primary/30 neon-border">
+                          <img src={i.fotos?.[i.fotoCapa || 0] || i.fotoUrl} alt={i.tipo} className="w-48 h-32 object-cover rounded" />
+                          {i.fotos?.length > 1 && (
+                            <span className="absolute bottom-1 right-1 bg-background/70 text-[10px] text-primary px-1.5 py-0.5 rounded-full backdrop-blur-sm">
+                              +{i.fotos.length} fotos
+                            </span>
+                          )}
                         </TooltipContent>
                       )}
                     </Tooltip>
@@ -340,6 +348,12 @@ export default function ImoveisPage() {
                 />
               </div>
             </div>
+            {/* Photo Gallery */}
+            <PhotoGallery
+              photos={form.fotos}
+              coverIndex={form.fotoCapa}
+              onChange={(fotos, fotoCapa) => setForm({ ...form, fotos, fotoCapa, fotoUrl: fotos[fotoCapa] || "" })}
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setModalOpen(false)} className="border-border">Cancelar</Button>
@@ -354,7 +368,10 @@ export default function ImoveisPage() {
           <DialogHeader><DialogTitle className="text-neon">Detalhes do Imóvel</DialogTitle></DialogHeader>
           {viewing && (
             <div className="space-y-3">
-              {viewing.fotoUrl && <img src={viewing.fotoUrl} alt={viewing.tipo} className="w-full h-40 object-cover rounded border border-border/30" />}
+              <ImageCarousel
+                images={viewing.fotos?.length ? viewing.fotos : viewing.fotoUrl ? [viewing.fotoUrl] : []}
+                aspectRatio="aspect-video"
+              />
               <div className="space-y-2 text-sm">
                 <p><span className="text-muted-foreground">Endereço:</span> {viewing.endereco}</p>
                 {viewing.complemento && <p><span className="text-muted-foreground">Complemento:</span> {viewing.complemento}</p>}
@@ -366,6 +383,7 @@ export default function ImoveisPage() {
                 <p><span className="text-muted-foreground">Status:</span> {viewing.status}</p>
                 <p><span className="text-muted-foreground">Cadastrado em:</span> {formatDate(viewing.criadoEm)}{isNew(viewing.criadoEm) && <span className="ml-2 text-accent text-xs">✨ Novo!</span>}</p>
                 <p><span className="text-muted-foreground">Última Visita:</span> {formatDate(viewing.ultimaVisita)}</p>
+                {viewing.fotos?.length > 0 && <p className="text-xs text-muted-foreground">{viewing.fotos.length} foto(s) no imóvel</p>}
               </div>
             </div>
           )}
