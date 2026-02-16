@@ -15,6 +15,8 @@ export interface Imovel {
   criadoEm: string;
   ultimaVisita: string;
   fotoUrl: string;
+  fotos: string[];
+  fotoCapa: number;
 }
 
 export type ContratoEtapa = "Proposta" | "Documentação" | "Assinatura" | "Concluído";
@@ -132,6 +134,7 @@ function generateInitialData() {
     const criadoEm = new Date(now.getTime() - hoursAgo * 3600000).toISOString();
     const visitaDaysAgo = Math.floor(Math.random() * 30);
     const ultimaVisita = visitaDaysAgo < 20 ? new Date(now.getTime() - visitaDaysAgo * 86400000).toISOString() : "";
+    const fotoUrl = FOTOS_IMOVEL[tipo] || "";
     imoveis.push({
       id: `imo-${i}`,
       endereco: `${pick(RUAS)}, ${Math.floor(10 + Math.random() * 2000)}`,
@@ -144,7 +147,9 @@ function generateInitialData() {
       status: pick(["Disponível", "Vendido", "Alugado"] as const),
       criadoEm,
       ultimaVisita,
-      fotoUrl: FOTOS_IMOVEL[tipo] || "",
+      fotoUrl,
+      fotos: fotoUrl ? [fotoUrl] : [],
+      fotoCapa: 0,
     });
   }
 
