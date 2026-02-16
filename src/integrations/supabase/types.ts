@@ -239,22 +239,37 @@ export type Database = {
       }
       profiles: {
         Row: {
+          bio: string | null
           created_at: string
           email: string | null
+          foto_url: string | null
           id: string
+          logo_url: string | null
           nome: string
+          slug: string | null
+          whatsapp: string | null
         }
         Insert: {
+          bio?: string | null
           created_at?: string
           email?: string | null
+          foto_url?: string | null
           id: string
+          logo_url?: string | null
           nome?: string
+          slug?: string | null
+          whatsapp?: string | null
         }
         Update: {
+          bio?: string | null
           created_at?: string
           email?: string | null
+          foto_url?: string | null
           id?: string
+          logo_url?: string | null
           nome?: string
+          slug?: string | null
+          whatsapp?: string | null
         }
         Relationships: []
       }
