@@ -11,7 +11,7 @@ import { PropertyTypeChart } from "@/components/dashboard/PropertyTypeChart";
 import { SidebarFilters } from "@/components/dashboard/SidebarFilters";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Filter, Target, Zap, DollarSign, CheckCircle2, Clock } from "lucide-react";
+import { Filter, Target, Zap, DollarSign, CheckCircle2, Clock, TrendingUp, Ban } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { ContratoData } from "@/data/mockData";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, Legend } from "recharts";
@@ -31,22 +31,25 @@ const Index = () => {
     mes: "Todos", tipoContrato: "Todos", tipoImovel: "Todos", bairro: "Todos",
   });
 
+  // Build ContratoData from real contratos, EXCLUDING cancelled
   const allData: ContratoData[] = useMemo(() => {
-    return contratos.map((c) => {
-      const imovel = imoveis.find((i) => i.id === c.imovelId);
-      const mesIndex = c.dataInicio ? parseInt(c.dataInicio.split("-")[1], 10) - 1 : 0;
-      const bairro = imovel?.bairro || "Ponta Verde";
-      return {
-        mes: MONTH_NAMES[mesIndex] || MONTH_NAMES[0],
-        mesIndex,
-        tipoContrato: c.tipo,
-        tipoImovel: imovel?.tipo || "Casa",
-        bairro,
-        regiao: regiaoMap[bairro] || "Centro",
-        valor: c.valorTotal,
-        comissao: c.valorTotal * c.comissaoPercent / 100,
-      };
-    });
+    return contratos
+      .filter((c) => c.etapa !== "Cancelado")
+      .map((c) => {
+        const imovel = imoveis.find((i) => i.id === c.imovelId);
+        const mesIndex = c.dataInicio ? parseInt(c.dataInicio.split("-")[1], 10) - 1 : 0;
+        const bairro = imovel?.bairro || "Ponta Verde";
+        return {
+          mes: MONTH_NAMES[mesIndex] || MONTH_NAMES[0],
+          mesIndex,
+          tipoContrato: c.tipo,
+          tipoImovel: imovel?.tipo || "Casa",
+          bairro,
+          regiao: regiaoMap[bairro] || "Centro",
+          valor: c.valorTotal,
+          comissao: c.valorTotal * c.comissaoPercent / 100,
+        };
+      });
   }, [contratos, imoveis]);
 
   const filteredData = useMemo(() => {
@@ -62,15 +65,22 @@ const Index = () => {
   // Match alerts
   const matches = useMemo(() => getMatches(), [getMatches]);
 
-  // Receivables data
+  // Receivables data — only from non-cancelled contracts
   const receivablesData = useMemo(() => {
-    let paga = 0, aReceber = 0;
+    let paga = 0, aReceber = 0, pipeline = 0, cancelado = 0;
     contratos.forEach((c) => {
       const comissao = c.valorTotal * c.comissaoPercent / 100;
-      if (c.comissaoPaga) paga += comissao;
-      else if (c.etapa === "Concluído") aReceber += comissao;
+      if (c.etapa === "Cancelado") {
+        cancelado += 1;
+      } else if (c.comissaoPaga) {
+        paga += comissao;
+      } else if (c.etapa === "Concluído") {
+        aReceber += comissao;
+      } else {
+        pipeline += c.valorTotal;
+      }
     });
-    return { paga, aReceber };
+    return { paga, aReceber, pipeline, cancelado };
   }, [contratos]);
 
   const isMobile = useIsMobile();
@@ -126,20 +136,34 @@ const Index = () => {
             </div>
           )}
 
-          {/* Receivables Summary */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Financial Summary */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="neon-border card-inset rounded-lg bg-card p-4 flex items-center gap-3">
-              <CheckCircle2 className="w-8 h-8 text-accent" />
+              <CheckCircle2 className="w-8 h-8 text-accent shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Comissão Recebida</p>
                 <p className="text-lg font-bold font-mono text-green-neon">{fmt(receivablesData.paga)}</p>
               </div>
             </div>
             <div className="neon-border card-inset rounded-lg bg-card p-4 flex items-center gap-3">
-              <Clock className="w-8 h-8 text-chart-orange" />
+              <Clock className="w-8 h-8 text-chart-orange shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Comissão a Receber</p>
                 <p className="text-lg font-bold font-mono text-neon">{fmt(receivablesData.aReceber)}</p>
+              </div>
+            </div>
+            <div className="neon-border card-inset rounded-lg bg-card p-4 flex items-center gap-3">
+              <TrendingUp className="w-8 h-8 text-primary shrink-0" />
+              <div>
+                <p className="text-xs text-muted-foreground">Pipeline (em negociação)</p>
+                <p className="text-lg font-bold font-mono text-neon">{fmt(receivablesData.pipeline)}</p>
+              </div>
+            </div>
+            <div className="neon-border card-inset rounded-lg bg-card p-4 flex items-center gap-3">
+              <Ban className="w-8 h-8 text-destructive shrink-0" />
+              <div>
+                <p className="text-xs text-muted-foreground">Cancelados</p>
+                <p className="text-lg font-bold font-mono text-muted-foreground">{receivablesData.cancelado}</p>
               </div>
             </div>
           </div>

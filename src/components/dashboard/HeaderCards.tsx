@@ -1,5 +1,5 @@
 import { ContratoData } from "@/data/mockData";
-import { FileStack, DollarSign, Calculator } from "lucide-react";
+import { FileStack, DollarSign, Calculator, TrendingUp } from "lucide-react";
 
 interface HeaderCardsProps {
   data: ContratoData[];
@@ -35,6 +35,7 @@ function SummaryCard({ icon: Icon, label, value, sublabel, variant = "default" }
 }
 
 export function HeaderCards({ data }: HeaderCardsProps) {
+  // data already excludes cancelled contracts (filtered in Index.tsx)
   const totalContratos = data.length;
   const valorBruto = data.reduce((sum, d) => sum + d.valor, 0);
   const totalComissao = data.reduce((sum, d) => sum + d.comissao, 0);
@@ -51,18 +52,20 @@ export function HeaderCards({ data }: HeaderCardsProps) {
           icon={FileStack}
           label="Contratos Ativos"
           value={totalContratos.toString()}
-          sublabel="Valor Bruto (Mensal)"
+          sublabel="Exclui cancelados"
         />
         <SummaryCard
           icon={DollarSign}
-          label="Valor Total"
+          label="VGV Total"
           value={formatCurrency(valorBruto)}
+          sublabel="Valor Geral de Vendas"
           variant="green"
         />
         <SummaryCard
           icon={Calculator}
-          label="Comissão"
+          label="Comissão Prevista"
           value={formatCurrency(totalComissao)}
+          sublabel="Sobre contratos ativos"
           variant="green"
         />
       </div>
