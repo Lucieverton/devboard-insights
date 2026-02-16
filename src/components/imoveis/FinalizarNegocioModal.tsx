@@ -35,7 +35,7 @@ function getDefaultComissao(tipo: string, operacao: "Venda" | "Locação"): numb
 }
 
 export function FinalizarNegocioModal({ open, onOpenChange, imovel }: Props) {
-  const { clientes, contratos, addContrato, updateImovel } = useData();
+  const { clientes, contratos, addContrato, updateContrato, updateImovel } = useData();
 
   const [operacao, setOperacao] = useState<"Venda" | "Locação">("Venda");
   const [clienteId, setClienteId] = useState("");
@@ -72,31 +72,40 @@ export function FinalizarNegocioModal({ open, onOpenChange, imovel }: Props) {
     }
     setSaving(true);
     try {
-      if (existingContract) {
-        // Update existing contract to Concluído
-        const { updateContrato } = useData.arguments?.[0] || {};
-        // We'll use the context directly - update via addContrato path
-      }
-
-      // Create or finalize the contract
       const newStatus = operacao === "Venda" ? "Vendido" : "Alugado";
 
-      // If there's an existing active contract, we update it
-      // Otherwise create a new one as Concluído
-      await addContrato({
-        imovelId: imovel.id,
-        clienteId: effectiveClienteId,
-        tipo: operacao,
-        valorTotal,
-        comissaoPercent: operacao === "Locação" ? 100 : comissaoPercent,
-        dataInicio,
-        dataFim,
-        etapa: "Concluído",
-        notas: [{ id: "", texto: `Negócio finalizado: ${operacao} por ${valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, data: new Date().toISOString() }],
-        dataRecebimento: comissaoPaga ? dataInicio : "",
-        comissaoPaga,
-        documentoUrl: "",
-      });
+      // If there's an existing active contract, update it to Concluído
+      if (existingContract) {
+        await updateContrato({
+          ...existingContract,
+          tipo: operacao,
+          valorTotal,
+          comissaoPercent: operacao === "Locação" ? 100 : comissaoPercent,
+          clienteId: effectiveClienteId,
+          dataInicio,
+          dataFim,
+          etapa: "Concluído",
+          notas: [...existingContract.notas, { id: "", texto: `Negócio finalizado: ${operacao} por ${valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, data: new Date().toISOString() }],
+          dataRecebimento: comissaoPaga ? dataInicio : "",
+          comissaoPaga,
+        });
+      } else {
+        // Create a new contract as Concluído
+        await addContrato({
+          imovelId: imovel.id,
+          clienteId: effectiveClienteId,
+          tipo: operacao,
+          valorTotal,
+          comissaoPercent: operacao === "Locação" ? 100 : comissaoPercent,
+          dataInicio,
+          dataFim,
+          etapa: "Concluído",
+          notas: [{ id: "", texto: `Negócio finalizado: ${operacao} por ${valorTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`, data: new Date().toISOString() }],
+          dataRecebimento: comissaoPaga ? dataInicio : "",
+          comissaoPaga,
+          documentoUrl: "",
+        });
+      }
 
       // Update property status
       await updateImovel({ ...imovel, status: newStatus as Imovel["status"] });
