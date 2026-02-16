@@ -11,9 +11,11 @@ import ImoveisPage from "./pages/Imoveis";
 import ContratosPage from "./pages/Contratos";
 import ClientesPage from "./pages/Clientes";
 import ConfiguracoesPage from "./pages/Configuracoes";
+import VitrinePage from "./pages/Vitrine";
 import AuthPage from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import { Loader2 } from "lucide-react";
+import { getTenantSlug } from "@/lib/tenant";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,29 @@ function AuthRoute() {
   return <AuthPage />;
 }
 
+function AppRoutes() {
+  // Check if accessing via subdomain (production multi-tenant)
+  const tenantSlug = getTenantSlug();
+  
+  // If on a tenant subdomain and not on /vitrine path, show vitrine directly
+  if (tenantSlug && !window.location.pathname.startsWith("/vitrine")) {
+    return <VitrinePage />;
+  }
+
+  return (
+    <Routes>
+      <Route path="/auth" element={<AuthRoute />} />
+      <Route path="/vitrine/:slug" element={<VitrinePage />} />
+      <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
+      <Route path="/imoveis" element={<ProtectedRoute><AppLayout><ImoveisPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/contratos" element={<ProtectedRoute><AppLayout><ContratosPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/clientes" element={<ProtectedRoute><AppLayout><ClientesPage /></AppLayout></ProtectedRoute>} />
+      <Route path="/configuracoes" element={<ProtectedRoute><AppLayout><ConfiguracoesPage /></AppLayout></ProtectedRoute>} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -47,15 +72,7 @@ const App = () => (
       <AuthProvider>
         <DataProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/auth" element={<AuthRoute />} />
-              <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
-              <Route path="/imoveis" element={<ProtectedRoute><AppLayout><ImoveisPage /></AppLayout></ProtectedRoute>} />
-              <Route path="/contratos" element={<ProtectedRoute><AppLayout><ContratosPage /></AppLayout></ProtectedRoute>} />
-              <Route path="/clientes" element={<ProtectedRoute><AppLayout><ClientesPage /></AppLayout></ProtectedRoute>} />
-              <Route path="/configuracoes" element={<ProtectedRoute><AppLayout><ConfiguracoesPage /></AppLayout></ProtectedRoute>} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <AppRoutes />
           </BrowserRouter>
         </DataProvider>
       </AuthProvider>
