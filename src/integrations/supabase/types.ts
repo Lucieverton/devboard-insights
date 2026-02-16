@@ -237,6 +237,30 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          qtd_imoveis: string
+          whatsapp: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          qtd_imoveis: string
+          whatsapp: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          qtd_imoveis?: string
+          whatsapp?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           bio: string | null
