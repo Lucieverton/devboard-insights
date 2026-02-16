@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Target } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Target, Link2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import LinkModal from "@/components/clientes/LinkModal";
+import ClienteDetailModal from "@/components/clientes/ClienteDetailModal";
 
 const PAGE_SIZE = 8;
 const bairrosOpts = BAIRROS.slice(1);
@@ -18,7 +20,7 @@ const emptyPref: ClientePreferencia = { tipoImovel: "", bairro: "", valorMax: 0 
 const emptyForm: Omit<Cliente, "id"> = { nome: "", contato: "", cpfCnpj: "", interesses: [], preferencia: undefined };
 
 export default function ClientesPage() {
-  const { clientes, addCliente, updateCliente, deleteCliente } = useData();
+  const { clientes, contratos, addCliente, updateCliente, deleteCliente } = useData();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
   const [sortKey, setSortKey] = useState<keyof Cliente>("nome");
@@ -27,8 +29,10 @@ export default function ClientesPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [linkOpen, setLinkOpen] = useState(false);
   const [editing, setEditing] = useState<Cliente | null>(null);
   const [viewing, setViewing] = useState<Cliente | null>(null);
+  const [linkingCliente, setLinkingCliente] = useState<Cliente | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [form, setForm] = useState<Omit<Cliente, "id">>(emptyForm);
   const [interesseInput, setInteresseInput] = useState("");
@@ -60,6 +64,7 @@ export default function ClientesPage() {
     setModalOpen(true);
   };
   const openView = (c: Cliente) => { setViewing(c); setViewOpen(true); };
+  const openLink = (c: Cliente) => { setLinkingCliente(c); setLinkOpen(true); };
   const openDelete = (id: string) => { setDeleteId(id); setDeleteOpen(true); };
 
   const handleSave = async () => {
@@ -85,6 +90,8 @@ export default function ClientesPage() {
     else { setSortKey(key); setSortAsc(true); }
   };
 
+  const getVinculosCount = (clienteId: string) => contratos.filter((c) => c.clienteId === clienteId).length;
+
   const SortHeader = ({ k, label }: { k: keyof Cliente; label: string }) => (
     <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground cursor-pointer hover:text-primary select-none" onClick={() => handleSort(k)}>
       {label} {sortKey === k ? (sortAsc ? "↑" : "↓") : ""}
@@ -104,43 +111,49 @@ export default function ClientesPage() {
         <Input value={search} onChange={(e) => { setSearch(e.target.value); setPage(0); }} placeholder="Buscar clientes..." className="pl-9 bg-secondary border-border" />
       </div>
       <div className="neon-border card-inset rounded-lg bg-card overflow-x-auto">
-        <table className="w-full text-sm min-w-[650px]">
+        <table className="w-full text-sm min-w-[750px]">
           <thead><tr className="border-b border-border/50">
             <SortHeader k="nome" label="Nome" />
             <SortHeader k="contato" label="Contato" />
             <SortHeader k="cpfCnpj" label="CPF/CNPJ" />
             <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Interesses</th>
-            <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Preferência</th>
+            <th className="py-2 px-3 text-left text-xs uppercase tracking-wider text-muted-foreground">Vínculos</th>
             <th className="py-2 px-3 text-right text-xs uppercase tracking-wider text-muted-foreground">Ações</th>
           </tr></thead>
           <tbody>
-            {paged.map((c) => (
-              <tr key={c.id} className="border-b border-border/20 hover:bg-secondary/30 transition-colors">
-                <td className="py-2 px-3 font-medium">{c.nome}</td>
-                <td className="py-2 px-3 text-muted-foreground">{c.contato}</td>
-                <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{c.cpfCnpj}</td>
-                <td className="py-2 px-3">
-                  <div className="flex gap-1 flex-wrap">
-                    {c.interesses.slice(0, 2).map((int, i) => (
-                      <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{int}</span>
-                    ))}
-                    {c.interesses.length > 2 && <span className="text-[10px] text-muted-foreground">+{c.interesses.length - 2}</span>}
-                  </div>
-                </td>
-                <td className="py-2 px-3">
-                  {c.preferencia ? (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/10 text-accent inline-flex items-center gap-1">
-                      <Target className="w-3 h-3" /> {c.preferencia.tipoImovel || "Qualquer"} · {c.preferencia.bairro || "Qualquer"} · até {fmt(c.preferencia.valorMax || 0)}
-                    </span>
-                  ) : <span className="text-[10px] text-muted-foreground">—</span>}
-                </td>
-                <td className="py-2 px-3 text-right space-x-1">
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openView(c)}><Eye className="w-3.5 h-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openEdit(c)}><Pencil className="w-3.5 h-3.5" /></Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => openDelete(c.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                </td>
-              </tr>
-            ))}
+            {paged.map((c) => {
+              const vinculos = getVinculosCount(c.id);
+              return (
+                <tr key={c.id} className="border-b border-border/20 hover:bg-secondary/30 transition-colors">
+                  <td className="py-2 px-3 font-medium">{c.nome}</td>
+                  <td className="py-2 px-3 text-muted-foreground">{c.contato}</td>
+                  <td className="py-2 px-3 font-mono text-xs text-muted-foreground">{c.cpfCnpj}</td>
+                  <td className="py-2 px-3">
+                    <div className="flex gap-1 flex-wrap">
+                      {c.interesses.slice(0, 2).map((int, i) => (
+                        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{int}</span>
+                      ))}
+                      {c.interesses.length > 2 && <span className="text-[10px] text-muted-foreground">+{c.interesses.length - 2}</span>}
+                    </div>
+                  </td>
+                  <td className="py-2 px-3">
+                    {vinculos > 0 ? (
+                      <Badge variant="outline" className="text-[10px] py-0 border-accent/50 text-accent gap-1">
+                        <Link2 className="w-3 h-3" /> {vinculos} contrato{vinculos > 1 ? "s" : ""}
+                      </Badge>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground">—</span>
+                    )}
+                  </td>
+                  <td className="py-2 px-3 text-right space-x-1 whitespace-nowrap">
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openView(c)} title="Ver detalhes"><Eye className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-accent" onClick={() => openLink(c)} title="Conectar imóvel/contrato"><Link2 className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-primary" onClick={() => openEdit(c)} title="Editar"><Pencil className="w-3.5 h-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => openDelete(c.id)} title="Excluir"><Trash2 className="w-3.5 h-3.5" /></Button>
+                  </td>
+                </tr>
+              );
+            })}
             {paged.length === 0 && <tr><td colSpan={6} className="py-8 text-center text-muted-foreground">Nenhum cliente encontrado</td></tr>}
           </tbody>
         </table>
@@ -211,32 +224,13 @@ export default function ClientesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Modal */}
-      <Dialog open={viewOpen} onOpenChange={setViewOpen}>
-        <DialogContent className="bg-card border-border">
-          <DialogHeader><DialogTitle className="text-neon">Detalhes do Cliente</DialogTitle></DialogHeader>
-          {viewing && (
-            <div className="space-y-2 text-sm">
-              <p><span className="text-muted-foreground">Nome:</span> {viewing.nome}</p>
-              <p><span className="text-muted-foreground">Contato:</span> {viewing.contato}</p>
-              <p><span className="text-muted-foreground">CPF/CNPJ:</span> <span className="font-mono">{viewing.cpfCnpj}</span></p>
-              <div><span className="text-muted-foreground">Interesses:</span>
-                <div className="flex gap-1 flex-wrap mt-1">{viewing.interesses.map((int, i) => <Badge key={i} variant="secondary">{int}</Badge>)}</div>
-              </div>
-              {viewing.preferencia && (
-                <div className="border border-accent/30 rounded-lg p-3 mt-2">
-                  <Label className="text-xs text-accent inline-flex items-center gap-1 mb-1"><Target className="w-3.5 h-3.5" /> Perfil de Match</Label>
-                  <div className="text-xs space-y-1 mt-1">
-                    <p><span className="text-muted-foreground">Tipo:</span> {viewing.preferencia.tipoImovel || "Qualquer"}</p>
-                    <p><span className="text-muted-foreground">Bairro:</span> {viewing.preferencia.bairro || "Qualquer"}</p>
-                    <p><span className="text-muted-foreground">Valor Máx:</span> {fmt(viewing.preferencia.valorMax)}</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Detail Modal with linked data */}
+      <ClienteDetailModal open={viewOpen} onOpenChange={setViewOpen} cliente={viewing} />
+
+      {/* Link Modal */}
+      {linkingCliente && (
+        <LinkModal open={linkOpen} onOpenChange={setLinkOpen} clienteId={linkingCliente.id} clienteNome={linkingCliente.nome} />
+      )}
 
       {/* Delete */}
       <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
