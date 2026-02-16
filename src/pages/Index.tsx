@@ -26,7 +26,7 @@ const regiaoMap: Record<string, string> = {
 const MONTH_NAMES = MESES.slice(1);
 
 const Index = () => {
-  const { contratos, imoveis, getMatches } = useData();
+  const { contratos, imoveis, getMatches, loading } = useData();
   const [filters, setFilters] = useState<FilterState>({
     mes: "Todos", tipoContrato: "Todos", tipoImovel: "Todos", bairro: "Todos",
   });

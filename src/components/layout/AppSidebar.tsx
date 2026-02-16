@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, Home, FileText, Users, Settings, Menu } from "lucide-react";
+import { LayoutDashboard, Home, FileText, Users, Settings, Menu, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -14,8 +15,9 @@ const NAV_ITEMS = [
 ];
 
 function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
+  const { signOut } = useAuth();
   return (
-    <nav className="p-2 space-y-0.5">
+    <nav className="p-2 space-y-0.5 flex-1">
       {NAV_ITEMS.map((item) => (
         <NavLink
           key={item.path}
@@ -34,6 +36,13 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           <span>{item.label}</span>
         </NavLink>
       ))}
+      <button
+        onClick={() => { signOut(); onNavigate?.(); }}
+        className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm transition-colors text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive w-full mt-4"
+      >
+        <LogOut className="w-4 h-4" />
+        <span>Sair</span>
+      </button>
     </nav>
   );
 }

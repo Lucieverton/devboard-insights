@@ -62,11 +62,11 @@ export default function ClientesPage() {
   const openView = (c: Cliente) => { setViewing(c); setViewOpen(true); };
   const openDelete = (id: string) => { setDeleteId(id); setDeleteOpen(true); };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.nome.trim()) return;
     const data = { ...form, preferencia: showPref && (pref.tipoImovel || pref.bairro || pref.valorMax) ? pref : undefined };
-    if (editing) updateCliente({ ...data, id: editing.id });
-    else addCliente(data);
+    if (editing) await updateCliente({ ...data, id: editing.id });
+    else await addCliente(data);
     setModalOpen(false);
   };
 
@@ -244,7 +244,7 @@ export default function ClientesPage() {
           <AlertDialogHeader><AlertDialogTitle>Confirmar exclusão</AlertDialogTitle><AlertDialogDescription>Tem certeza que deseja excluir este cliente?</AlertDialogDescription></AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="border-border">Cancelar</AlertDialogCancel>
-            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={() => { if (deleteId) deleteCliente(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/80" onClick={async () => { if (deleteId) await deleteCliente(deleteId); setDeleteOpen(false); }}>Excluir</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
