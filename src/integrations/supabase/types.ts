@@ -150,51 +150,66 @@ export type Database = {
       }
       imoveis: {
         Row: {
+          area_m2: number | null
           bairro: string | null
+          banheiros: number | null
           cep: string | null
           cidade: string | null
           complemento: string | null
           created_at: string
           criado_em: string
+          destaque: boolean | null
           endereco: string
           foto_capa_url: string | null
           id: string
+          quartos: number | null
           status: string
           tipo: string
           ultima_visita: string | null
           user_id: string
+          vagas: number | null
           valor: number
         }
         Insert: {
+          area_m2?: number | null
           bairro?: string | null
+          banheiros?: number | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           created_at?: string
           criado_em?: string
+          destaque?: boolean | null
           endereco: string
           foto_capa_url?: string | null
           id?: string
+          quartos?: number | null
           status?: string
           tipo: string
           ultima_visita?: string | null
           user_id: string
+          vagas?: number | null
           valor?: number
         }
         Update: {
+          area_m2?: number | null
           bairro?: string | null
+          banheiros?: number | null
           cep?: string | null
           cidade?: string | null
           complemento?: string | null
           created_at?: string
           criado_em?: string
+          destaque?: boolean | null
           endereco?: string
           foto_capa_url?: string | null
           id?: string
+          quartos?: number | null
           status?: string
           tipo?: string
           ultima_visita?: string | null
           user_id?: string
+          vagas?: number | null
           valor?: number
         }
         Relationships: []

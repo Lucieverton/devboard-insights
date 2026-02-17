@@ -19,6 +19,11 @@ export interface Imovel {
   fotoUrl: string;
   fotos: string[];
   fotoCapa: number;
+  quartos?: number;
+  banheiros?: number;
+  vagas?: number;
+  area_m2?: number;
+  destaque?: boolean;
 }
 
 export type ContratoEtapa = "Proposta" | "Documentação" | "Assinatura" | "Concluído" | "Cancelado";
@@ -166,6 +171,11 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
           fotoUrl: fotos.length > 0 ? fotos[capaIndex >= 0 ? capaIndex : 0].url : "",
           fotos: fotos.map(f => f.url),
           fotoCapa: capaIndex >= 0 ? capaIndex : 0,
+          quartos: i.quartos || undefined,
+          banheiros: i.banheiros || undefined,
+          vagas: i.vagas || undefined,
+          area_m2: i.area_m2 ? Number(i.area_m2) : undefined,
+          destaque: i.destaque || false,
         };
       }));
 
@@ -221,7 +231,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       valor: i.valor,
       status: i.status,
       ultima_visita: i.ultimaVisita || null,
-    }).select().single();
+      quartos: (i as any).quartos || null,
+      banheiros: (i as any).banheiros || null,
+      vagas: (i as any).vagas || null,
+      area_m2: (i as any).area_m2 || null,
+      destaque: (i as any).destaque || false,
+    } as any).select().single();
     if (error) { toast({ title: "Erro ao cadastrar imóvel", description: error.message, variant: "destructive" }); return; }
 
     // Handle photos - upload to storage
@@ -264,7 +279,12 @@ export function DataProvider({ children }: { children: React.ReactNode }) {
       valor: i.valor,
       status: i.status,
       ultima_visita: i.ultimaVisita || null,
-    }).eq("id", i.id);
+      quartos: (i as any).quartos || null,
+      banheiros: (i as any).banheiros || null,
+      vagas: (i as any).vagas || null,
+      area_m2: (i as any).area_m2 || null,
+      destaque: (i as any).destaque || false,
+    } as any).eq("id", i.id);
     if (error) { toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" }); return; }
 
     // Auto-cancel non-concluded contracts when property returns to "Disponível"

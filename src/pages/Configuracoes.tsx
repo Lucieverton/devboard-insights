@@ -178,22 +178,6 @@ export default function ConfiguracoesPage() {
             />
           </div>
           {slugError && <p className="text-xs text-destructive">{slugError}</p>}
-          {profile.slug && !slugError && (
-            <div className="flex items-center gap-2 mt-1">
-              <p className="text-xs text-muted-foreground">
-                Sua vitrine: <span className="text-primary font-mono">{vitrineUrl}</span>
-              </p>
-              <button
-                onClick={() => { navigator.clipboard.writeText(vitrineUrl); toast({ title: "Link copiado!" }); }}
-                className="text-primary hover:text-primary/80"
-              >
-                <Copy className="w-3.5 h-3.5" />
-              </button>
-              <a href={vitrineUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80">
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          )}
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="w-full">
@@ -201,6 +185,36 @@ export default function ConfiguracoesPage() {
           Salvar Configurações
         </Button>
       </div>
+
+      {/* Vitrine Link Preview */}
+      {profile.slug && !slugError && (
+        <div className="neon-border card-inset rounded-lg bg-card p-5 space-y-4">
+          <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+            <ExternalLink className="w-4 h-4 text-primary" />
+            Sua Vitrine Pública
+          </h3>
+          <div className="bg-secondary/50 rounded-lg p-3 border border-border/30">
+            <p className="text-xs text-muted-foreground mb-1">Link da sua vitrine:</p>
+            <p className="text-sm font-mono text-primary break-all">{vitrineUrl}</p>
+          </div>
+          <div className="flex gap-2">
+            <a
+              href={vitrineUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Abrir Vitrine
+            </a>
+            <button
+              onClick={() => { navigator.clipboard.writeText(vitrineUrl); toast({ title: "Link copiado!" }); }}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-primary/40 text-primary text-xs font-bold uppercase tracking-wider hover:bg-primary/10 transition-colors"
+            >
+              <Copy className="w-3.5 h-3.5" /> Copiar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* About */}
       <div className="neon-border card-inset rounded-lg bg-card p-5 text-sm text-muted-foreground space-y-1">

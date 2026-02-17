@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Sparkles, Share2, CalendarDays, HandshakeIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Eye, Search, ChevronLeft, ChevronRight, Sparkles, Share2, CalendarDays, HandshakeIcon, Star } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
@@ -96,7 +96,7 @@ export default function ImoveisPage() {
   const openNew = () => { setEditing(null); setForm({ ...emptyForm, criadoEm: new Date().toISOString() }); setModalOpen(true); };
   const openEdit = (i: Imovel) => {
     setEditing(i);
-    setForm({ endereco: i.endereco, cep: i.cep, bairro: i.bairro, cidade: i.cidade, complemento: i.complemento, tipo: i.tipo, valor: i.valor, status: i.status, criadoEm: i.criadoEm, ultimaVisita: i.ultimaVisita, fotoUrl: i.fotoUrl, fotos: i.fotos || [], fotoCapa: i.fotoCapa || 0 });
+    setForm({ endereco: i.endereco, cep: i.cep, bairro: i.bairro, cidade: i.cidade, complemento: i.complemento, tipo: i.tipo, valor: i.valor, status: i.status, criadoEm: i.criadoEm, ultimaVisita: i.ultimaVisita, fotoUrl: i.fotoUrl, fotos: i.fotos || [], fotoCapa: i.fotoCapa || 0, quartos: i.quartos, banheiros: i.banheiros, vagas: i.vagas, area_m2: i.area_m2, destaque: i.destaque } as any);
     setModalOpen(true);
   };
   const openView = (i: Imovel) => { setViewing(i); setViewOpen(true); };
@@ -356,6 +356,42 @@ export default function ImoveisPage() {
                 />
               </div>
             </div>
+
+            {/* Novos campos: Quartos, Banheiros, Vagas, Área */}
+            <div className="grid grid-cols-4 gap-3">
+              <div>
+                <Label className="text-xs text-muted-foreground">Quartos</Label>
+                <Input type="number" value={(form as any).quartos || ""} onChange={(e) => setForm({ ...form, quartos: e.target.value ? Number(e.target.value) : undefined } as any)} placeholder="—" className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Banheiros</Label>
+                <Input type="number" value={(form as any).banheiros || ""} onChange={(e) => setForm({ ...form, banheiros: e.target.value ? Number(e.target.value) : undefined } as any)} placeholder="—" className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Vagas</Label>
+                <Input type="number" value={(form as any).vagas || ""} onChange={(e) => setForm({ ...form, vagas: e.target.value ? Number(e.target.value) : undefined } as any)} placeholder="—" className="bg-secondary border-border" />
+              </div>
+              <div>
+                <Label className="text-xs text-muted-foreground">Área m²</Label>
+                <Input type="number" value={(form as any).area_m2 || ""} onChange={(e) => setForm({ ...form, area_m2: e.target.value ? Number(e.target.value) : undefined } as any)} placeholder="—" className="bg-secondary border-border" />
+              </div>
+            </div>
+
+            {/* Toggle Destaque VIP */}
+            <div className="flex items-center gap-3 py-1">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={(form as any).destaque || false}
+                  onChange={(e) => setForm({ ...form, destaque: e.target.checked } as any)}
+                  className="w-4 h-4 accent-primary"
+                />
+                <span className="text-xs font-semibold text-primary flex items-center gap-1">
+                  <Star className="w-3.5 h-3.5" /> Destaque VIP na Vitrine
+                </span>
+              </label>
+            </div>
+
             {/* Photo Gallery */}
             <PhotoGallery
               photos={form.fotos}

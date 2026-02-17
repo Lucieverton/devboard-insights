@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getTenantSlug } from "@/lib/tenant";
-import { ImageCarousel } from "@/components/imoveis/ImageCarousel";
-import { Loader2, MessageCircle, MapPin, Home, Building2, ChevronRight, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PropertyCarousel } from "@/components/vitrine/PropertyCarousel";
+import { PropertyDrawer } from "@/components/vitrine/PropertyDrawer";
+import {
+  Loader2, MessageCircle, MapPin, Home, Building2,
+  ChevronRight, Search, Zap, Star, Share2, Phone, X,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface VitrineProfile {
@@ -25,6 +28,11 @@ interface VitrineImovel {
   tipo: string;
   valor: number;
   fotos: string[];
+  quartos?: number;
+  banheiros?: number;
+  vagas?: number;
+  area_m2?: number;
+  destaque?: boolean;
 }
 
 const FAQ_ITEMS = [
@@ -33,6 +41,8 @@ const FAQ_ITEMS = [
   { q: "Vocês auxiliam com financiamento?", a: "Com certeza! Temos parceiros que facilitam todo o processo de financiamento imobiliário para você." },
 ];
 
+const TABS = ["Todos", "Apartamento", "Casa", "Comercial"];
+
 export default function VitrinePage() {
   const { slug: paramSlug } = useParams<{ slug: string }>();
   const [profile, setProfile] = useState<VitrineProfile | null>(null);
@@ -40,6 +50,9 @@ export default function VitrinePage() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [activeFaq, setActiveFaq] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState("Todos");
+  const [search, setSearch] = useState("");
+  const [selectedProperty, setSelectedProperty] = useState<VitrineImovel | null>(null);
 
   useEffect(() => {
     const slug = paramSlug || getTenantSlug();
@@ -62,12 +75,12 @@ export default function VitrinePage() {
 
       const { data: imoveisData } = await supabase
         .from("imoveis")
-        .select("id, endereco, bairro, cidade, tipo, valor")
+        .select("id, endereco, bairro, cidade, tipo, valor, quartos, banheiros, vagas, area_m2, destaque")
         .eq("user_id", p.id)
         .eq("status", "Disponível")
         .order("criado_em", { ascending: false });
 
-      const ids = (imoveisData || []).map(i => i.id);
+      const ids = (imoveisData || []).map((i: any) => i.id);
       let fotosMap: Record<string, string[]> = {};
       if (ids.length > 0) {
         const { data: fotosData } = await supabase
@@ -81,26 +94,49 @@ export default function VitrinePage() {
         });
       }
 
-      setImoveis((imoveisData || []).map(i => ({
+      setImoveis((imoveisData || []).map((i: any) => ({
         id: i.id, endereco: i.endereco, bairro: i.bairro || "",
         cidade: i.cidade || "", tipo: i.tipo, valor: Number(i.valor),
         fotos: fotosMap[i.id] || [],
+        quartos: i.quartos, banheiros: i.banheiros, vagas: i.vagas,
+        area_m2: i.area_m2 ? Number(i.area_m2) : undefined,
+        destaque: i.destaque || false,
       })));
 
       setLoading(false);
     })();
   }, [paramSlug]);
 
-  const openWhatsApp = (imovel?: VitrineImovel) => {
+  const filteredItems = useMemo(() => {
+    return imoveis.filter(item => {
+      const matchesTab = activeTab === "Todos" || item.tipo === activeTab;
+      const matchesSearch = !search || item.endereco.toLowerCase().includes(search.toLowerCase()) ||
+        item.bairro.toLowerCase().includes(search.toLowerCase());
+      return matchesTab && matchesSearch;
+    });
+  }, [imoveis, activeTab, search]);
+
+  const featured = filteredItems.filter(i => i.destaque);
+  const others = filteredItems.filter(i => !i.destaque);
+
+  const openWhatsApp = (msg?: string) => {
     if (!profile?.whatsapp) return;
     const phone = profile.whatsapp.replace(/\D/g, "");
-    const msg = imovel
-      ? encodeURIComponent(`Olá, vi o imóvel ${imovel.endereco} no seu link da DevStores e gostaria de mais informações.`)
-      : encodeURIComponent(`Olá, vi sua vitrine na DevStores e gostaria de mais informações.`);
-    window.open(`https://wa.me/55${phone}?text=${msg}`, "_blank");
+    const text = encodeURIComponent(msg || `Olá, vi sua vitrine na DevStores e gostaria de mais informações.`);
+    window.open(`https://wa.me/55${phone}?text=${text}`, "_blank");
   };
 
-  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const fmt = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", notation: "compact" as any });
+  const fmtFull = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const handleShare = async () => {
+    const url = window.location.href;
+    if (navigator.share) {
+      try { await navigator.share({ title: profile?.nome, url }); } catch {}
+    } else {
+      navigator.clipboard.writeText(url);
+    }
+  };
 
   if (loading) {
     return (
@@ -123,135 +159,189 @@ export default function VitrinePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center py-4 px-3">
-      {/* === MAIN CONTAINER (template-style centered card) === */}
-      <div className="w-full max-w-md neon-border card-inset rounded-xl bg-card overflow-hidden">
+    <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans">
 
-        {/* --- HEADER --- */}
-        <header className="text-center px-5 pt-5 pb-4 border-b border-border/30">
-          {profile.logo_url && (
-            <img
-              src={profile.logo_url}
-              alt="Logo"
-              className="w-14 h-14 mx-auto mb-3 object-contain drop-shadow-[0_0_6px_hsl(var(--primary)/0.4)]"
-            />
-          )}
-          <h1 className="text-xl font-bold text-neon tracking-wide animate-pulse-glow">
-            {profile.nome}
-          </h1>
-          {profile.bio && (
-            <p className="text-xs text-muted-foreground mt-1.5 opacity-80 line-clamp-2">{profile.bio}</p>
-          )}
-          {profile.whatsapp && (
-            <button
-              onClick={() => openWhatsApp()}
-              className="mt-3 inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider border border-primary/40 rounded-md text-primary bg-primary/5 hover:bg-primary/15 hover:border-primary hover:shadow-[0_0_10px_hsl(var(--primary)/0.3)] transition-all duration-300 hover:-translate-y-0.5"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              Fale Comigo
-            </button>
-          )}
-        </header>
-
-        {/* --- SECTION TITLE: IMÓVEIS --- */}
-        <div className="text-center my-4 px-4">
-          <span className="inline-block px-3 py-1 text-xs font-bold uppercase tracking-[3px] text-primary-foreground bg-primary rounded shadow-[0_2px_6px_hsl(var(--primary)/0.3),inset_0_1px_1px_hsl(0_0%_100%/0.2)]">
-            Imóveis Disponíveis
-          </span>
-        </div>
-
-        {/* --- PROPERTY HORIZONTAL CAROUSEL --- */}
-        {imoveis.length === 0 ? (
-          <div className="text-center py-10 px-4 text-muted-foreground">
-            <Home className="w-8 h-8 mx-auto mb-2 opacity-50" />
-            <p className="text-xs">Nenhum imóvel disponível no momento.</p>
+      {/* === HEADER FIXO === */}
+      <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b border-border/20 p-4">
+        <div className="max-w-md mx-auto space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {profile.logo_url ? (
+                <img src={profile.logo_url} alt="Logo" className="w-7 h-7 object-contain" />
+              ) : (
+                <Zap className="text-primary" size={20} />
+              )}
+              <span className="font-black tracking-tighter text-lg">
+                {profile.nome.split(" ")[0].toUpperCase()}{" "}
+                <span className="text-primary font-light italic">STORES</span>
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={handleShare} className="p-2 bg-secondary rounded-full">
+                <Share2 size={16} className="text-muted-foreground" />
+              </button>
+              {profile.foto_url ? (
+                <img src={profile.foto_url} alt={profile.nome} className="w-8 h-8 rounded-full object-cover border-2 border-primary shadow-[0_0_12px_hsl(var(--primary)/0.4)]" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold text-xs shadow-[0_0_12px_hsl(var(--primary)/0.4)]">
+                  {profile.nome.charAt(0)}
+                </div>
+              )}
+            </div>
           </div>
-        ) : (
-          <div className="w-full overflow-x-auto scrollbar-hide pb-4">
-            <div className="flex gap-3 px-4" style={{ width: "max-content" }}>
-              {imoveis.map(imovel => (
-                <div
-                  key={imovel.id}
-                  className="w-[280px] flex-shrink-0 bg-secondary/30 border border-border/40 rounded-lg overflow-hidden hover:-translate-y-1 hover:shadow-[0_4px_12px_hsl(var(--primary)/0.2),0_0_8px_hsl(var(--primary)/0.15)] transition-all duration-300 snap-center"
-                >
-                  {/* Carousel inside card */}
-                  <ImageCarousel images={imovel.fotos} aspectRatio="aspect-[4/3]" />
 
-                  <div className="p-3 space-y-1.5">
-                    <h3 className="text-sm font-semibold text-foreground truncate">{imovel.endereco}</h3>
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                      <MapPin className="w-3 h-3 shrink-0" />
-                      {imovel.bairro}{imovel.cidade ? `, ${imovel.cidade}` : ""}
-                    </p>
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-base font-bold font-mono text-neon">{fmt(imovel.valor)}</span>
-                      <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full">{imovel.tipo}</span>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <input
+              type="text"
+              placeholder="Ex: Ponta Verde, 3 quartos..."
+              className="w-full bg-secondary border border-border/30 rounded-2xl py-3 pl-12 pr-4 text-sm focus:border-primary/50 outline-none transition-all text-foreground placeholder:text-muted-foreground"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide py-1">
+            {TABS.map(tab => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-5 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap border",
+                  activeTab === tab
+                    ? "bg-primary border-primary text-primary-foreground shadow-[0_0_16px_hsl(var(--primary)/0.2)]"
+                    : "bg-transparent border-border/30 text-muted-foreground"
+                )}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* === MAIN CONTENT === */}
+      <main className="max-w-md mx-auto p-4 space-y-10 pb-32">
+
+        {/* Destaques VIP */}
+        {featured.length > 0 && (
+          <section className="space-y-4">
+            <h2 className="text-xs font-black uppercase tracking-[0.2em] text-primary flex items-center gap-2">
+              <Star size={14} fill="currentColor" /> Destaques VIP
+            </h2>
+            <div className="flex gap-4 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
+              {featured.map(item => (
+                <div key={item.id} className="min-w-[85%] snap-center">
+                  <div
+                    className="aspect-[4/5] rounded-[2.5rem] overflow-hidden border border-border/30 relative cursor-pointer"
+                    onClick={() => setSelectedProperty(item)}
+                  >
+                    <PropertyCarousel images={item.fotos} />
+                    <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/40 to-transparent pointer-events-none">
+                      <p className="text-primary text-[10px] font-black uppercase tracking-widest mb-1">{item.tipo}</p>
+                      <h3 className="text-xl font-black tracking-tighter text-white mb-1">{item.endereco}</h3>
+                      <p className="text-lg font-mono font-bold text-white">{fmt(item.valor)}</p>
                     </div>
-                    <button
-                      onClick={() => openWhatsApp(imovel)}
-                      className="w-full mt-2 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-md bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"
-                    >
-                      <MessageCircle className="w-3.5 h-3.5" />
-                      Tenho Interesse
-                    </button>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* --- PROFILE / ABOUT SECTION --- */}
-        <section className="text-center px-5 py-5 border-t border-border/30">
-          {profile.foto_url && (
-            <div className="w-16 h-16 mx-auto mb-3 rounded-full border-2 border-primary overflow-hidden shadow-[0_0_10px_hsl(var(--primary)/0.3),inset_0_0_6px_hsl(var(--primary)/0.2)]">
-              <img src={profile.foto_url} alt={profile.nome} className="w-full h-full object-cover" />
+        {/* Mais Oportunidades */}
+        <section className="space-y-4">
+          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">
+            {featured.length > 0 ? "Mais Oportunidades" : "Imóveis Disponíveis"}
+          </h2>
+          {others.length === 0 && featured.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground">
+              <Home className="w-8 h-8 mx-auto mb-2 opacity-50" />
+              <p className="text-xs">Nenhum imóvel disponível no momento.</p>
             </div>
-          )}
-          <h2 className="text-base font-bold text-neon">{profile.nome}</h2>
-          <p className="text-[11px] text-muted-foreground mt-0.5 opacity-70">Corretor(a) de Imóveis</p>
-
-          {/* Social buttons */}
-          {profile.whatsapp && (
-            <div className="flex justify-center gap-3 mt-3">
-              <button
-                onClick={() => openWhatsApp()}
-                className="w-10 h-10 rounded-full border-2 border-primary/40 bg-primary/5 flex items-center justify-center text-primary hover:bg-primary/15 hover:border-primary hover:shadow-[0_0_8px_hsl(var(--primary)/0.4)] transition-all duration-300 hover:scale-110 active:scale-90"
-                aria-label="WhatsApp"
-              >
-                <MessageCircle className="w-4 h-4" />
-              </button>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {others.map(item => (
+                <div
+                  key={item.id}
+                  onClick={() => setSelectedProperty(item)}
+                  className="bg-secondary/30 border border-border/30 rounded-[1.5rem] overflow-hidden cursor-pointer hover:border-primary/30 transition-all"
+                >
+                  <div className="aspect-square relative">
+                    <img
+                      src={item.fotos[0] || "/placeholder.svg"}
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                    {item.fotos.length > 1 && (
+                      <div className="absolute top-2 right-2 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded-full text-[8px] font-bold text-white">
+                        {item.fotos.length} fotos
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-3 space-y-1">
+                    <h4 className="text-[11px] font-black uppercase truncate text-foreground">{item.endereco}</h4>
+                    <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <MapPin size={10} /> {item.bairro}
+                    </p>
+                    <p className="text-primary font-mono text-xs font-bold pt-1">{fmt(item.valor)}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </section>
 
-        {/* --- FAQ SECTION --- */}
-        <section className="px-4 pb-5">
-          <div className="text-center mb-3">
-            <span className="inline-block px-3 py-1 text-xs font-bold uppercase tracking-[3px] text-primary-foreground bg-primary rounded shadow-[0_2px_6px_hsl(var(--primary)/0.3)]">
-              Dúvidas Frequentes
-            </span>
+        {/* Perfil do Corretor */}
+        <section className="text-center py-6 space-y-3">
+          {profile.foto_url && (
+            <div className="w-20 h-20 mx-auto rounded-full border-2 border-primary overflow-hidden shadow-[0_0_20px_hsl(var(--primary)/0.4)]">
+              <img src={profile.foto_url} alt={profile.nome} className="w-full h-full object-cover" />
+            </div>
+          )}
+          <div>
+            <h2 className="text-lg font-bold text-neon">{profile.nome}</h2>
+            <p className="text-xs text-muted-foreground">Corretor(a) de Imóveis</p>
           </div>
+          {profile.bio && (
+            <p className="text-xs text-muted-foreground max-w-xs mx-auto leading-relaxed">{profile.bio}</p>
+          )}
+          {profile.whatsapp && (
+            <button
+              onClick={() => openWhatsApp()}
+              className="inline-flex items-center gap-2 px-6 py-2.5 text-xs font-bold uppercase tracking-wider border border-primary/40 rounded-xl text-primary bg-primary/5 hover:bg-primary/15 transition-all"
+            >
+              <Phone size={14} /> WhatsApp
+            </button>
+          )}
+        </section>
 
+        {/* FAQ */}
+        <section className="space-y-3">
+          <h2 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground text-center">
+            Dúvidas Frequentes
+          </h2>
           <div className="space-y-2">
             {FAQ_ITEMS.map((item, idx) => (
               <div key={idx}>
                 <button
                   onClick={() => setActiveFaq(activeFaq === idx ? null : idx)}
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 text-left text-xs font-semibold border border-border/40 bg-secondary/30 rounded-md transition-all duration-300 hover:shadow-[0_2px_8px_hsl(var(--primary)/0.2),0_0_6px_hsl(var(--primary)/0.15)]",
-                    activeFaq === idx && "rounded-b-none border-primary/50 shadow-[0_2px_8px_hsl(var(--primary)/0.25)]"
+                    "w-full flex items-center justify-between px-4 py-3 text-left text-xs font-semibold border border-border/30 bg-secondary/30 rounded-xl transition-all",
+                    activeFaq === idx && "rounded-b-none border-primary/40"
                   )}
                 >
-                  <span className="text-foreground">{idx + 1}. {item.q}</span>
+                  <span className="text-foreground">{item.q}</span>
                   <ChevronRight className={cn(
                     "w-4 h-4 text-primary shrink-0 transition-transform duration-300",
                     activeFaq === idx && "rotate-90"
                   )} />
                 </button>
                 <div className={cn(
-                  "overflow-hidden transition-all duration-400 ease-out",
-                  activeFaq === idx ? "max-h-40 border border-t-0 border-border/40 rounded-b-md px-3 py-2.5" : "max-h-0"
+                  "overflow-hidden transition-all duration-300",
+                  activeFaq === idx ? "max-h-40 border border-t-0 border-border/30 rounded-b-xl px-4 py-3" : "max-h-0"
                 )}>
                   <p className="text-[11px] text-muted-foreground leading-relaxed">{item.a}</p>
                 </div>
@@ -259,10 +349,29 @@ export default function VitrinePage() {
             ))}
           </div>
         </section>
-      </div>
+      </main>
 
-      {/* --- FOOTER --- */}
-      <footer className="text-center py-5">
+      {/* === DRAWER DE DETALHES === */}
+      <PropertyDrawer
+        property={selectedProperty}
+        onClose={() => setSelectedProperty(null)}
+        onWhatsApp={(msg) => openWhatsApp(msg)}
+      />
+
+      {/* === BOTÃO FLUTUANTE === */}
+      {profile.whatsapp && !selectedProperty && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md z-50">
+          <button
+            onClick={() => openWhatsApp()}
+            className="w-full bg-foreground text-background py-4 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-3 shadow-2xl border border-border/20"
+          >
+            <MessageCircle size={16} /> Falar com Especialista
+          </button>
+        </div>
+      )}
+
+      {/* === FOOTER === */}
+      <footer className="text-center py-6 pb-24">
         <p className="text-[10px] text-muted-foreground">
           Powered by <span className="text-neon font-semibold">DevStores</span>
         </p>
